@@ -2,6 +2,11 @@ from app.db import connect
 
 def init_db():
     c = connect()
+    # WAL once at schema bootstrap (the mode persists in the database file):
+    # a read transaction then keeps its snapshot while a writer commits, so
+    # the board's two panes and the top strip never observe a half-committed lend.
+    if c.execute("PRAGMA journal_mode").fetchone()[0].lower() != "wal":
+        c.execute("PRAGMA journal_mode=WAL")
     c.executescript("""
     CREATE TABLE IF NOT EXISTS items(
       id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT, owner TEXT, status TEXT, data_quality TEXT
@@ -13,6 +18,7 @@ def init_db():
     CREATE TABLE IF NOT EXISTS settings(key TEXT PRIMARY KEY, value TEXT);
     """)
     if c.execute("SELECT COUNT(*) c FROM items").fetchone()["c"] == 0:
+        c.execute("BEGIN")
         c.executemany("INSERT INTO items(title,owner,status,data_quality) VALUES (?,?,?,?)", [
             ("电钻", "老周", "available", "clean"),
             ("折叠桌", "小陈", "available", "clean"),
@@ -24,5 +30,5 @@ def init_db():
             (4, "邻居甲", "active", "2020-06-01", "2020-05-01"),
         )
         c.execute("INSERT INTO settings(key,value) VALUES ('board_name','木色邻里板')")
-        c.commit()
+        c.execute("COMMIT")
     c.close()

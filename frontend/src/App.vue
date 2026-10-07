@@ -1,9 +1,10 @@
 <template>
   <div>
     <div class="status-bar">
-      <span>可借 {{ counts.available || 0 }}</span>
-      <span>在借 {{ counts.active || 0 }}</span>
-      <span>逾期 {{ counts.overdue || 0 }}</span>
+      <!-- 顶细条数直接数栏内条数：与左右分栏同一个 /board 世界 -->
+      <span>可借 {{ availableCount }}</span>
+      <span>在借 {{ activeCount }}</span>
+      <span>逾期 {{ overdueCount }}</span>
     </div>
     <nav class="topnav">
       <router-link to="/">看板</router-link>
@@ -16,13 +17,15 @@
   </div>
 </template>
 <script setup>
-import { ref, onMounted, provide } from 'vue'
+import { ref, computed, onMounted, provide } from 'vue'
 import { api } from './api'
-const counts = ref({})
 const board = ref({ available: [], active: [], overdue: [] })
+// 顶细条数 = 各栏条数，杜绝"数与栏不是同一世界"
+const availableCount = computed(() => (board.value.available || []).length)
+const activeCount = computed(() => (board.value.active || []).length)
+const overdueCount = computed(() => (board.value.overdue || []).length)
 async function load() {
   board.value = await api('/board')
-  counts.value = board.value.counts || {}
 }
 provide('board', board)
 provide('reloadBoard', load)
